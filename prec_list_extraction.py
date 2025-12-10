@@ -3,17 +3,31 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List
-
+from dotenv import load_dotenv
+import os
 import requests
 
-# 설정
-OC = "applekiho"  # applekiho@gmail.com 의 ID 부분
+# 환경변수 불러오기
+OC = os.getenv("OC")
+LIST_URL_BASE = os.getenv("LIST_URL_BASE")
+DETAIL_URL = os.getenv("DETAIL_URL")
+
+LIST_TARGET = os.getenv("LIST_TARGET")
+LIST_TYPE = os.getenv("LIST_TYPE")
+LIST_SEARCH = os.getenv("LIST_SEARCH")
+LIST_PERIOD = os.getenv("LIST_PERIOD")
+LIST_ORG = os.getenv("LIST_ORG")
+LIST_DISPLAY = os.getenv("LIST_DISPLAY")
+
+# 최종 URL 구성
 LIST_URL = (
-    "http://www.law.go.kr/DRF/lawSearch.do?"
-    "OC=applekiho&target=prec&type=JSON&search=2&prncYd=20240101~20251209&org=400201&display=1679"
+    f"{LIST_URL_BASE}?OC={OC}&target={LIST_TARGET}&type={LIST_TYPE}"
+    f"&search={LIST_SEARCH}&prncYd={LIST_PERIOD}&org={LIST_ORG}&display={LIST_DISPLAY}"
 )
-DETAIL_URL = "http://www.law.go.kr/DRF/lawService.do"
+  
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
 DATA_DIR = BASE_DIR / "DATA"
 DATA_DIR.mkdir(exist_ok=True)
 PRECEDENTS_DIR = DATA_DIR / "precedents"

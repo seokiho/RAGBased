@@ -1,25 +1,9 @@
-"""
-대법원 형사 판례 JSON만 이용해 질문/답변을 생성하는 스크립트.
-
-사용 방법 (PowerShell 예시):
-    setx OPENAI_API_KEY "sk-..."   # 한 번만 설정
-    cd c:\\Users\\seoki\\Desktop\\Prj_RAG
-    python gen_questions.py         # 기본 297개 생성
-
-출력:
-    DATA/generated_questions.json  (목표 297개, 부족 시 가능한 만큼 생성)
-
-필수 항목:
-    - 질문(생성)
-    - 답변(생성)
-    - 참조판례/사건번호/판례정보일련번호: 원문 그대로 유지
-"""
-
 import json
 import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List
+ 
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -90,7 +74,7 @@ def build_prompt(fields: Dict[str, str]) -> str:
     return f"""당신은 법률 전문가 어시스턴트입니다. 아래 판례 정보를 바탕으로 질문 1개와 답변 1개를 생성하세요.
 - 참조판례/사건번호/판례정보일련번호는 수정하지 마십시오.
 - 참조조문도 그대로 유지하십시오.
-- 질문은 일반인의 입장에서 해당 판례에서 궁금해하거나 쟁점사항에 대해 묻는 질문으로 작성하세요.
+- 질문은 일반인의 입장에서 판례를 바탕으로 궁금해하거나 쟁점사항에 대해 묻는 내용으로 작성하되, 판례를 읽어보지 않았더라도 이해할 수 있는 질문("이 판례의 내용"과 같은 질문은 금지)으로 작성하세요. 
 - 답변은 구조와 형식을 반드시 따르세요.
 - 답변 길이는 최소 300자 이상으로 충분히 상세하게 작성하세요.
 
