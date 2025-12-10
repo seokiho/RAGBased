@@ -1,3 +1,4 @@
+```
 project-root/
 ├── .env                          # APIキーなどの設定情報ファイル
 ├── .gitignore                    # .envをGitHubに同期させないための設定ファイル
@@ -16,3 +17,4 @@ project-root/
         ├── 2019do11015.json          # 収集した判例の本文ファイル（計297件）
         ├── 2019do12345.json
         └── ...
+```
