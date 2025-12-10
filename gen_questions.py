@@ -71,9 +71,11 @@ def extract_fields(item: Dict[str, Any]) -> Dict[str, str]:
         or item.get("사건명_한글")
         or ""
     ).strip()
-    case_no = str(item.get("사건번호") or item.get("case_no") or "").strip()
-    prec_id = str(item.get("판례정보일련번호") or item.get("판례일련번호") or "").strip()
+    case_no = str(item.get("사건번호") or "").strip()
+    prec_id = str(item.get("판례정보일련번호") or "").strip()
     body = str(item.get("판례내용") or item.get("본문") or "").strip()
+    stc_day = str(item.get("선고일자") or "").strip()
+
     statute = str(item.get("참조조문") or "").strip()
     return {
         "사건명": case_name,
@@ -81,13 +83,14 @@ def extract_fields(item: Dict[str, Any]) -> Dict[str, str]:
         "판례정보일련번호": prec_id,
         "본문": body,
         "참조조문": statute,
+        "선고일자": stc_day,
     }
-
 
 def build_prompt(fields: Dict[str, str]) -> str:
     return f"""당신은 법률 전문가 어시스턴트입니다. 아래 판례 정보를 바탕으로 질문 1개와 답변 1개를 생성하세요.
 - 참조판례/사건번호/판례정보일련번호는 수정하지 마십시오.
 - 참조조문도 그대로 유지하십시오.
+- 질문은 일반인의 입장에서 해당 판례에서 궁금해하거나 쟁점사항에 대해 묻는 질문으로 작성하세요.
 - 답변은 구조와 형식을 반드시 따르세요.
 - 답변 길이는 최소 300자 이상으로 충분히 상세하게 작성하세요.
 
@@ -97,6 +100,7 @@ def build_prompt(fields: Dict[str, str]) -> str:
 판례정보일련번호: {fields['판례정보일련번호']}
 판례내용(참고용 발췌): {fields['본문'][:1200]}
 참조조문: {fields['참조조문']}
+선고일자: {fields['선고일자']}
 
 [출력 형식 지침]
 질문: <핵심 쟁점을 묻는 질문 1개>
@@ -139,6 +143,7 @@ def generate_qna(client: OpenAI, fields: Dict[str, str]) -> Dict[str, str]:
         "사건번호": fields["사건번호"],
         "판례정보일련번호": fields["판례정보일련번호"],
         "참조조문": fields["참조조문"],
+        "선고일자": fields["선고일자"],
         "답변": answer,
     }
 
