@@ -1,6 +1,5 @@
 ```
 project-root/
-├── .env                          # APIキーなどの設定情報ファイル
 ├── .gitignore                    # .envをGitHubに同期させないための設定ファイル
 ├── gen_questions.py              # 297件のデータから質問・回答を生成するモジュール
 ├── prec_list_extraction.py       # 国家情報サイトAPIを利用してデータを収集するモジュール
