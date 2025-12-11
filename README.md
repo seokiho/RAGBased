@@ -12,6 +12,14 @@ project-root/
     ├── prec_list.json                # 収集した判例データ（2024-01-01〜2025-12-09）
     ├── prec_list_criminal.json       # prec_list.jsonから刑事事件のみを抽出したデータ
     ├── final_results.tsv             # RAG基づく生成された回答
+    ├── few_shot.json
+    ├── zero_shot.json
+    ├── questions_only.txt
+    │
+    ├─generated_answers/
+    │  └─few_shot/
+    │          final_results.json
+    │          final_results.tsv
     └── precedents/
         ├── 2019do11015.json          # 収集した判例の本文ファイル（計297件）
         ├── 2019do12345.json
