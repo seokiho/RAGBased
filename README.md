@@ -1,6 +1,5 @@
 ```
 project-root/
-├── .env                          # APIキーなどの設定情報ファイル
 ├── .gitignore                    # .envをGitHubに同期させないための設定ファイル
 ├── gen_questions.py              # 297件のデータから質問・回答を生成するモジュール
 ├── prec_list_extraction.py       # 国家情報サイトAPIを利用してデータを収集するモジュール
@@ -11,8 +10,14 @@ project-root/
 └── DATA/
     ├── generated_questions.json      # 生成されたQAデータ（JSON）
     ├── prec_list.json                # 収集した判例データ（2024-01-01〜2025-12-09）
-    ├── prec_list_criminal.json       # prec_list.jsonから刑事事件のみを抽出したデータ
-    ├── final_results.tsv             # RAG基づく生成された回答
+    ├── prec_list_criminal.json       # prec_list.jsonから刑事事件のみを抽出したデータ       
+    ├── few_shot.json                 # few shot
+    ├── questions_only.txt
+    │
+    ├─generated_answers/
+    │  └─few_shot/
+    │          final_results.json     # RAG基づく生成された回答 timestamp
+    │          final_results.tsv      # RAG基づく生成された回答の内容
     └── precedents/
         ├── 2019do11015.json          # 収集した判例の本文ファイル（計297件）
         ├── 2019do12345.json
