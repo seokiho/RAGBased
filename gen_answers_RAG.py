@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+
 import json
 import os
 import time
@@ -5,13 +7,11 @@ import pickle
 import numpy as np
 import faiss
 import openai
-from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain.llms import OpenAI
-from langchain_openai import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
+import random
+from langchain_community.vectorstores import FAISS
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_core.prompts import PromptTemplate
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 import logging
 from datetime import datetime
@@ -19,12 +19,25 @@ from typing import List, Dict
 from tqdm import tqdm
 import pandas as pd
 
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type
+)
+ 
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
- 
- 
-openai_api_key = os.getenv("OPENAI_API_KEY")
+load_dotenv(override=True)  # override=True 추가
+
+# API 키 로드 시 공백 제거
+openai_api_key = os.getenv("OPENAI_API_KEY", "").replace(' ', '').strip()
+
+if not openai_api_key:
+    raise RuntimeError("OPENAI_API_KEY 환경변수가 필요합니다.")
+
 os.environ["OPENAI_API_KEY"] = openai_api_key
+
+
 
 # 기본 디렉토리 경로 설정
 index_dir = r'C:\Users\seoki\Desktop\Studying_ML\db'
@@ -121,7 +134,6 @@ def create_few_shot_prompt(few_shot_examples: List[Dict], context: str, question
     )
 
 
-
 def get_answer_with_few_shot(
     qa_chain,
     llm,
@@ -132,15 +144,12 @@ def get_answer_with_few_shot(
 ) -> str:
     """Few-shot 예제와 RAG 기반으로 답변 생성"""
     try:
-        # 질문 확장
         if use_self_querying:
             query = expand_query(query)
         
-        # 관련 문서 검색
-        docs = retriever.get_relevant_documents(query)
+        docs = retriever.invoke(query)
         context = "\n".join([doc.page_content for doc in docs])
         
-        # Few-shot 프롬프트 생성
         system_prompt = """당신은 법률 전문가 어시스턴트입니다. 다음 지침을 반드시 따라주세요:
 
 1. 답변 구조:
@@ -191,17 +200,20 @@ def get_answer_with_few_shot(
 반드시 [답변], [관련 법령], [관련 사례/예시], [주의사항] 섹션을 모두 포함해야 합니다.
 각 섹션은 충분히 상세하게 작성해주세요.
 """
-        # 답변 생성
-        response = llm.predict(combined_prompt)
-        return response
+        response = llm.invoke(combined_prompt)  # predict → invoke 변경
+        
+        # invoke는 AIMessage 객체를 반환하므로 .content로 텍스트 추출
+        if hasattr(response, 'content'):
+            return response.content
+        else:
+            return str(response)
         
     except Exception as e:
         logger.error(f"답변 생성 실패: {str(e)}")
         raise
-
-
+    
 def setup_qa_system(faiss_store):
-    """QA 시스템 설정 - MMR 검색 방식 사용"""
+    """QA 시스템 설정"""
     try:
         retriever = faiss_store.as_retriever(
             search_type="mmr",  
@@ -218,18 +230,12 @@ def setup_qa_system(faiss_store):
             max_tokens=2000
         )
         
-        qa_chain = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=retriever,
-            return_source_documents=True
-        )
+        # qa_chain은 None으로 반환 (코드에서 실제로 사용 안 함)
+        return None, retriever, llm
         
-        return qa_chain, retriever, llm
     except Exception as e:
         logger.error(f"QA 시스템 설정 실패: {str(e)}")
         raise
-
  
 def save_results(results: List[Dict], output_dir: str, file_name: str = "results") -> Dict:
     """결과 저장"""
@@ -256,11 +262,11 @@ def save_results(results: List[Dict], output_dir: str, file_name: str = "results
         raise
 
 queries = [
-"[관련 법령 특정]: 위 문서에서 언급된 피고인이 피해자로부터 인건비를 편취한 행위는 어떤 법령 조항에 해당할 수 있으며, 해당 법령의 의미는 무엇인가요?",
-"[판례 검색]: 피고인이 피해자로부터 인건비를 편취한 것과 유사한 사안에서 법원이 어떤 법리를 적용했는지 확인할 수 있는 주요 판례가 있습니까? 판례의 고유 식별자나 문서 ID를 제시해 주세요. 만약 문서 내에 판례 ID가 없다면 '참조 판례 없음'으로 표시하세요.",
-"[요건 사실 정리]: 피고인이 피해자로부터 인건비를 편취했다는 공소사실이 성립되기 위해 법적으로 충족되어야 하는 구체적인 요건은 무엇인가요?",
+"압수·수색 과정에서 피고인이 아닌 다른 사람의 주거지를 수색할 때, 법적 절차는 어떻게 되어야 하나요?",
+"공소장 변경이 허용되지 않는 특별한 사정이 무엇인지 궁금합니다.",
+"피고인이 특정 기업의 요청을 받고 우호적인 기사를 작성하는 대가로 여행 경비를 받는 것이 법적으로 문제가 되는 이유는 무엇인가요?",
+"교사가 훈육 목적으로 학생에게 가한 행위가 정서적 학대에 해당하는지 판단하는 기준은 무엇인가요?"
 ]
-
     
 from tenacity import (
     retry,
@@ -269,7 +275,7 @@ from tenacity import (
     retry_if_exception_type
 )
     
-    
+   
 def process_queries_batch_with_few_shot(
     faiss_store,
     queries: List[str],
@@ -407,28 +413,29 @@ def get_answer_with_rate_limit(
 ) -> str:
     """재시도 로직이 포함된 답변 생성 함수"""
     try:
-        # 고정 딜레이 사용
-        time.sleep(3.0)  # 3초 고정 딜레이
+        time.sleep(3.0)
         
         if use_self_querying:
             query = expand_query(query)
         
-        # 임베딩/검색 전 딜레이
         time.sleep(3.0)
-        docs = retriever.get_relevant_documents(query)
+        docs = retriever.invoke(query)
         context = "\n".join([doc.page_content for doc in docs])
         
-        # GPT 호출 전 딜레이
         time.sleep(3.0)
         combined_prompt = create_prompt(few_shot_examples, context, query)
-        response = llm.predict(combined_prompt)
+        response = llm.invoke(combined_prompt)  # predict → invoke 변경
         
-        return response
+        # invoke는 AIMessage 객체를 반환하므로 .content로 텍스트 추출
+        if hasattr(response, 'content'):
+            return response.content
+        else:
+            return str(response)
         
     except Exception as e:
         logger.error(f"답변 생성 실패: {str(e)}")
         raise
-
+    
 @retry(
     retry=retry_if_exception_type((Exception)),
     wait=wait_exponential(multiplier=1, min=4, max=20),
