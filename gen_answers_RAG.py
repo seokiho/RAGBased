@@ -921,4 +921,4 @@ try:
     
 except Exception as e:
     print(f"실행 중 오류 발생: {str(e)}")
-  
+ 
